@@ -1,0 +1,7 @@
+credentials.json
+gas-config.json
+index.js
+memo.txt
+node_modules/
+run.sh
+token.json

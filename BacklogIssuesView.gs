@@ -1,0 +1,572 @@
+/**
+ * BacklogのIssue情報をシートに表示するクラス
+ */
+function BacklogIssuesView(params) {
+  // 出力列情報
+  this.attrs = this.getHashAttr(params.attributes);
+  this.lenAttrs = Object.keys(this.attrs).length;
+
+  this.colors = params.colors;
+  this.comments = params.comments;
+  this.view = params.view;
+  this.issues = params.issues;
+
+  // シート情報
+  this.sheet = SpreadsheetApp.getActive().getSheetByName(params.sheet);
+
+  // インデックス情報（無い時は-1）
+  this.idxSpace = this.indexOfAttr("スペース");
+  this.idxProject = this.indexOfAttr("プロジェクト");
+  
+  // 最終行に設定
+  var rowLast = this.sheet.getDataRange().getLastRow();
+
+  // 1行目はデータが有っても無くても1になる
+  if (rowLast > 1) {
+    rowLast += 1
+  }
+  // 順に表示するため
+  this.iterator = this.sheet.getRange(rowLast, 1);
+}
+
+/**
+ * 表示項目情報を連想配列で取得
+ * @protected
+ */
+BacklogIssuesView.prototype.getHashAttr = function(attributes) {
+  var hAttrs = {};
+  var index = 0;
+
+  attributes.forEach(function(attr) {
+     // 表示対象のみ
+    if (attr.visible) {
+      hAttrs[attr.name] = {
+        index: index,
+        size: attr.size
+      };
+      index ++;
+    }
+  });
+  return hAttrs;
+};
+
+/**
+ * 指定属性のインデックスを取得
+ * @protected
+ * @return 表示対象外の場合は、-1
+ */
+BacklogIssuesView.prototype.indexOfAttr = function(name) {
+  if (this.attrs[name] === undefined) {
+    return -1;
+  }
+
+  return this.attrs[name].index;
+};
+
+/**
+ * ハイパーリンクの生成
+ * @protected
+ */
+BacklogIssuesView.prototype.toHiperlink = function(url, str) {
+  return '=HYPERLINK(\"' + url + '\",\"' + str + '\")';
+};
+
+/**
+ * 年月日に変換
+ * @protected
+ */
+BacklogIssuesView.prototype.toDate = function(date) {
+  if (date == null) {
+    return "";
+  }
+
+  var d = new Date(date);
+  var string = d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+  return string;
+};
+
+/**
+ * 指定日数が経過しているかどうか
+ * @protected
+ */
+BacklogIssuesView.prototype.isRecentDay = function(date, day) {
+  var ret = false;
+
+  if (date == null) {
+    return ret;
+  }
+
+  var d = new Date(date);
+  var dRecent = new Date(d.getTime() + day * 24 * 60 * 60 * 1000);
+  var dNow = new Date();
+  if (dNow < dRecent) {
+    ret = true;
+  }
+  return ret;
+};
+
+/**
+ * 更新日が最新表示に該当するかどうか
+ * @protected
+ */
+BacklogIssuesView.prototype.isRecent = function(date) {
+  return this.isRecentDay(date, this.view.dayRecent);
+};
+
+/**
+ * （完了を対象に）非表示にする指定期間以内であるかどうか
+ * @protected
+ */
+BacklogIssuesView.prototype.isRecentCompleted = function(date) {
+  return this.isRecentDay(date, this.issues.dayHideCompleted);
+};
+
+/**
+ * （非完了を対象に）更新日が非表示にする指定期間以内であるかどうか
+ * @protected
+ */
+BacklogIssuesView.prototype.isRecentActive = function(date) {
+  return this.isRecentDay(date, this.issues.dayHideActive);
+};
+
+/**
+ * 期限日が指定期日以内かどうか
+ * @protected
+ */
+BacklogIssuesView.prototype.isNearing = function(date) {
+  return this.isRecentDay(date, this.view.dayNearing * -1) ? false : true;
+};
+
+/**
+ * 期限日が過ぎているかどうか
+ * @protected
+ */
+BacklogIssuesView.prototype.isExpired = function(date) {
+  return this.isRecentDay(date, 0) ? false : true;
+};
+
+/**
+ * 複数要素セルへのHYPERLINK設定
+ * @protected
+ * @note 対象オブジェクト（配列）は、id, name, displayOrderメンバを持っていること
+ */
+BacklogIssuesView.prototype.applyHiperLink = function(objects, urls) {
+  var values = [];
+  var value;
+  var o;
+  var url = null;
+  
+  // 既にならんでいるが、一応ソート
+  objects.sort(function(a, b){
+    if(a.displayOrder < b.displayOrder) return -1;
+    if(a.displayOrder > b.displayOrder) return 1;
+    return 0;
+  });
+
+  // 結合用文字列の抽出と、URLの抽出
+  for (var i in objects) {
+    o = objects[i];
+
+    values.push(o.name);
+  
+    // urlは複数設定できないので、最初の一つだけ
+    if (urls[o.id] && url == null) {
+      url = urls[o.id]
+    }
+  }
+  
+  // HYPERLINKを設定
+  if (url != null) {
+    value = this.toHiperlink(url, values.join('\n'));
+  }
+  else {
+    value = values.join('\n');
+  }
+  return value;
+};
+
+/**
+ * コメントを指定文字数で切る
+ * @protected
+ */
+BacklogIssuesView.prototype.substrComment = function(content) {
+  if (content == null) {
+    return "";
+  }
+  else if (content == "") {
+    return content;
+  }
+
+  var max = this.comments.maxChar;
+  if (!isNaN(max) && 0 < max) {
+    // 最大値以上だったら切り詰め
+    if (content.length > max) {
+      content = content.substr(0, max) + "\n...（省略）";      
+    }
+  }
+  return content;
+};
+
+/**
+ * 変更履歴1オブジェクトを整形
+ * @protected
+ */
+BacklogIssuesView.prototype.makeChangeLog = function(changeLog) {
+  var originalValue = (changeLog.originalValue == null) ? '未設定' : changeLog.originalValue;
+  var newValue = (changeLog.newValue == null) ? '未設定' : changeLog.newValue;
+  return originalValue + "→" + newValue + "\n";
+}
+
+/**
+ * 変更履歴を整形
+ * @protected
+ */
+BacklogIssuesView.prototype.makeChangeLogs = function(changeLogs) {
+  var self = this;
+  var changeLog = '';
+
+  changeLogs.forEach(function(log) {
+    switch (log.field) {
+      case 'component':
+        changeLog += "[カテゴリー] " + self.makeChangeLog(log);
+        break;
+      case 'milestone':
+        changeLog += "[マイルストーン] " + self.makeChangeLog(log);
+        break;
+      case 'status':
+        changeLog += "[状態] " + self.makeChangeLog(log);
+        break;
+      case 'limitDate':
+        changeLog += "[期限日] " + self.makeChangeLog(log);
+        break;
+      case 'resolution':
+        changeLog += "[完了理由] " + self.makeChangeLog(log);
+        break;
+      case 'attachment':
+        // 省略
+        break;
+      default:
+        break;          
+    }
+  });
+
+  return changeLog;
+};
+
+/**
+ * コメント情報の生成
+ * @protected
+ */
+BacklogIssuesView.prototype.makeStatus = function(comments) {
+  var contents = [];
+  var content;
+  var value;
+  var comment;
+  var changeLog;
+  var recent = false;
+
+  for (var i in comments) {
+    comment = comments[i];
+
+    // 変更履歴？
+    changeLog = this.makeChangeLogs(comment.changeLog);
+
+    // コメントを最大表示文字数で切る
+    content = this.substrComment(comment.content);
+
+    // どちらも無ければ処理しない
+    if (changeLog == "" && content == "") {
+      continue;
+    }
+    
+    // コメント生成
+    value  = "(" + this.toDate(comment.updated) + " " + comment.createdUser.name + ")\n"
+    value += changeLog + content;
+    contents.push(value);
+
+    // 最新なら強調表示指定（セル単位でしか色変更できない）
+    if (this.isRecent(comment.updated)) {
+      recent = true;
+    }
+
+    // 最大表示コメント数判定
+    if (contents.length >= this.comments.maxDisplay) {
+      break;
+    }
+  }
+
+  var status = contents.join("\n");
+  return {status : status, recent: recent};
+};
+
+/**
+ * ヘッダーの出力
+ */
+BacklogIssuesView.prototype.printHeader = function() {
+  // 描画済みなら描画しない
+  var range = this.sheet.getRange(1, 1);
+  if (! range.isBlank()) {
+    return;
+  }
+
+  var contents = [
+    Object.keys(this.attrs)
+  ];
+  this.iterator.offset(0, 0, contents.length, contents[0].length)
+  .setValues(contents)
+  .setBackground(this.colors.header);
+  this.iterator = this.iterator.offset(1, 0);
+};
+
+/**
+ * スペース情報の設定
+ */
+BacklogIssuesView.prototype.setSpace = function(space) {
+  this.space = space;
+};
+
+/**
+ * スペース情報の出力
+ */
+BacklogIssuesView.prototype.printSpace = function(url) {
+  // カラムが表示対象でなければ行も出力しない
+  if (this.idxSpace == -1) {
+    return;
+  }
+
+  this.iterator.offset(0, 0, 1, this.lenAttrs).setBackground(this.colors.space);
+  this.iterator.offset(0, this.idxSpace).setValue(this.toHiperlink(url, this.space.name));
+  this.iterator = this.iterator.offset(1, 0);
+};
+
+/**
+ * プロジェクト情報の設定
+ */
+BacklogIssuesView.prototype.setProject = function(project) {
+  this.project = project;
+};
+
+/**
+ * プロジェクト情報の出力
+ */
+BacklogIssuesView.prototype.printProject = function(url) {
+  // カラムが表示対象でなければ行も出力しない
+  if (this.idxProject == -1) {
+    return;
+  }
+
+  this.iterator.offset(0, 0, 1, this.lenAttrs).setBackground(this.colors.project);
+  // スペース関連設定
+  if (this.idxSpace != -1) {
+    this.iterator.offset(0, this.idxSpace)
+    .setFontColor(this.colors.project).setValue(this.space.name);
+  }
+  this.iterator.offset(0, this.idxProject).setValue(this.toHiperlink(url, this.project.name));
+  this.iterator = this.iterator.offset(1, 0);
+};
+
+/**
+ * プロジェクト表示の終了処理
+ */
+BacklogIssuesView.prototype.finishProject = function(url) {
+  SpreadsheetApp.flush();
+};
+
+
+/**
+ * 課題情報の出力
+ */
+BacklogIssuesView.prototype.printIssue = function(issue, url, comments, categoryUrls, milestoneUrls) {
+  // 表示列を抽出
+  var rows = [];
+  var columns = [];
+  var idxStatus = -1;
+  var idxUpdated = -1;
+  var idxDueDate = -1;
+  var color;
+  var recentCreated = false;
+  var recentUpdated = false;
+  var recentCompleted = false;
+  var recentActive = false;
+  var recentCommented = false;
+  var nearing = false;
+  var expired = false;
+  var completed = false;
+
+  for (var name in this.attrs) {
+    var attr = this.attrs[name];
+
+    switch (name) {
+      case "スペース":
+        columns[attr.index] = this.space.name;
+        break;
+      case "プロジェクト":
+        columns[attr.index] = this.project.name;
+        break;
+      case "種別":
+        columns[attr.index] = issue.issueType.name;
+        break;
+      case "キー":
+        columns[attr.index] = this.toHiperlink(url, issue.issueKey);
+        break;
+      case "件名":
+        columns[attr.index] = issue.summary;
+        break;
+      case "担当者":
+        if (issue.assignee == null) {
+          columns[attr.index] = "";
+        }
+        else {
+          columns[attr.index] = issue.assignee.name;
+        }
+        break;
+      case "状態":
+        columns[attr.index] = issue.status.name;
+        if (issue.status.id == 4) { // 完了
+          completed = true;
+        }
+        break;
+      case "優先度":
+        columns[attr.index] = issue.priority.name;
+        break;
+      case "カテゴリー":
+        // HYPERLINKの設定
+        columns[attr.index] = this.applyHiperLink(issue.category, categoryUrls);
+        break;
+      case "マイルストーン":
+        // HYPERLINKの設定
+        columns[attr.index] = this.applyHiperLink(issue.milestone, milestoneUrls);
+        break;
+      case "登録日":
+        recent = this.isRecent(issue.created);
+        columns[attr.index] = this.toDate(issue.created);
+        break;
+      case "期限日":
+        columns[attr.index] = this.toDate(issue.dueDate);
+        idxDueDate = attr.index;
+        if (issue.dueDate != null) {
+          nearing = this.isNearing(issue.dueDate);
+          expired = this.isExpired(issue.dueDate);
+        }
+        break;
+      case "更新日":
+        recentUpdated = this.isRecent(issue.updated);
+        recentCompleted = this.isRecentCompleted(issue.updated);
+        recentActive = this.isRecentActive(issue.updated);
+        columns[attr.index] = this.toDate(issue.updated);
+        idxUpdated = attr.index;
+        break;
+      case "登録者":
+        columns[attr.index] = issue.createdUser.name;
+        break;
+      case "状況":
+        statuses = this.makeStatus(comments);
+        recentCommented = statuses.recent;
+        columns[attr.index] = statuses.status;
+        idxStatus = attr.index;
+        break;
+      default:
+        break;
+    }
+  }
+
+  // 表示しない条件を判定
+  if (completed) {
+    // 完了で指定日以前
+    if (!recentCompleted) {
+      return;
+    }
+  }
+  else {
+    // 非完了で指定日以前
+    if (!recentActive) {
+      return;
+    }
+  }
+
+  // setValues向けに行を設定
+  rows.push(columns);
+
+  // 上寄せ指定
+  this.iterator.offset(0, 0, rows.length, columns.length).setVerticalAlignment('top');
+  // 折り返し
+  this.iterator.offset(0, 0, rows.length, columns.length).setWrap(true);
+
+  // 背景、完了を考慮
+  var background = 'white';
+  var background2 = null;
+  if (completed) {
+    background = this.colors.completed;
+  }
+  else if (expired) {
+    background2 = this.colors.expired;
+  }
+  else if (nearing) {
+    background2 = this.colors.nearing;
+  }
+  this.iterator.offset(0, 0, rows.length, columns.length).setBackground(background);
+  // 強調表示
+  if (background2 != null) {
+    this.iterator.offset(0, idxDueDate, rows.length, 1).setBackground(background2);
+  }
+
+  // 文字色
+
+  // 折り返しは対象外の列
+  // フィルタ用文字は背景色と同じ
+  if (this.idxSpace >= 0) {
+    this.iterator.offset(0, this.idxSpace, rows.length, 1)
+    .setWrap(false).setFontColor(background);
+  }
+  if (this.idxProject >= 0) {
+    this.iterator.offset(0, this.idxProject, rows.length, 1)
+    .setWrap(false).setFontColor(background);
+  }
+  // 最新は強調表示
+  if (recentCreated) {
+    this.iterator.offset(0, 0, rows.length, columns.length).setFontColor(this.colors.recent);
+  }
+  if (recentUpdated) {
+    this.iterator.offset(0, idxUpdated, rows.length, 1).setFontColor(this.colors.recent);
+  }
+  if (recentCommented) {
+    this.iterator.offset(0, idxStatus, rows.length, 1).setFontColor(this.colors.recent);
+  }
+
+  // 最後に値を表示
+  this.iterator.offset(0, 0, rows.length, columns.length).setValues(rows);
+
+  this.iterator = this.iterator.offset(1, 0);
+};
+
+/**
+ * シートの高さ、幅をconfigの設定値でリサイズする
+ */
+BacklogIssuesView.prototype.resize = function() {
+  // 行
+  this.sheet.autoResizeRows(1, this.sheet.getDataRange().getLastRow());
+
+  // 列
+  for (var name in this.attrs) {
+    attr = this.attrs[name];
+    this.sheet.setColumnWidth((1 + attr.index), attr.size);
+  }
+  // 日本語が小さくリサイズされる
+  // this.sheet.autoResizeColumns(1, this.attrs.length - 1);
+};
+
+/**
+ * 表示調整
+ */
+BacklogIssuesView.prototype.finalize = function() {
+  SpreadsheetApp.flush();
+  this.sheet.setFrozenRows(1);
+};
+
+/**
+ * 初期化。シートをまっさらにする。
+ */
+BacklogIssuesView.prototype.reset = function() {
+  // 一旦、シートをクリアにする
+  this.sheet.clear();
+};

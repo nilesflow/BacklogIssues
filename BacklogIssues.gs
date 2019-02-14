@@ -36,8 +36,8 @@ function BacklogIssues(params) {
   // Backlog APIクラス生成
   this.backlogs = this.createBacklog(config.spaces);
 
-  // 進捗表示サイドバー
-  this.sidebar = new SidebarProgress();
+  // サイドバー表示クラス
+  this.sidebar = null;
 }
 
 /**
@@ -191,6 +191,9 @@ BacklogIssues.prototype.tellEnd = function() {
  * @protected
  */
 BacklogIssues.prototype.tellExit = function(message) {
+  if (this.sidebar == null) {
+    return;
+  }
   this.sidebar.log(message);
   this.tellEnd();
 };
@@ -200,6 +203,9 @@ BacklogIssues.prototype.tellExit = function(message) {
  * @protected
  */
 BacklogIssues.prototype.tellError = function() {
+  if (this.sidebar == null) {
+    return;
+  }
   this.sidebar.log("エラーが発生しました。");
   this.tellEnd();
 };
@@ -305,8 +311,8 @@ BacklogIssues.prototype.printProjects = function(backlog) {
     url = backlog.buildUrlProject();
     
     // プロジェクト情報の描画
-    this.view.setProject(project);
-    this.view.printProject(url);
+    this.view.setProject(project, url);
+    this.view.printProject();
     
     // 課題の表示処理
     this.printIssues(backlog, issues);
@@ -351,9 +357,9 @@ BacklogIssues.prototype.printSpaces = function() {
     this.tellSpace(Number(i) + 1, space.name);
 
     // スペース情報の描画
-    this.view.setSpace(space);
     url = backlog.buildUrlSpace();
-    this.view.printSpace(url);
+    this.view.setSpace(space, url);
+    this.view.printSpace();
 
     // プロジェクト表示の実行
     ret = this.printProjects(backlog);
@@ -371,12 +377,19 @@ BacklogIssues.prototype.printSpaces = function() {
 
 /**
  * 課題取得の実行
+ * main.gs からコールされる
  */
-BacklogIssues.prototype.load = function() {
+BacklogIssues.prototype.load = function(param) {
   var self = this;
 
-  // サイドバー表示
+  // 進捗表示サイドバー
+  this.sidebar = new SidebarProgress();
   this.tellBegin();
+
+  // スペース／プロジェクト行の表示有無
+  this.view.setPrintProjectRow(param.isPrintProjectRow);
+  // テキストの折り返し
+  this.view.setWrap(param.isWrap);
 
   // スペース毎のプロジェクト情報を読み込み
   this.backlogs.forEach(function(backlog) {
@@ -423,14 +436,33 @@ BacklogIssues.prototype.load = function() {
 
 /**
  * 高さ、幅の調整
+ * main.gs からコールされる
  */
 BacklogIssues.prototype.resize = function() {
   this.view.resize();
 };
 
 /**
+ * 行の高さを調節するため、折り返しを設定
+ * main.gs からコールされる
+ */
+BacklogIssues.prototype.setWraps = function(isWrap) {
+  this.view.setWraps(isWrap);
+};
+
+/**
+ * 行の最大サイズを設定
+ * main.gs からコールされる
+ * ※未使用
+ */
+BacklogIssues.prototype.setMaxRowSize = function(size) {
+  this.view.resizeRows(size);
+};
+
+/**
  * 全リセット
  * 関連シートを全てクリアする
+ * main.gs からコールされる
  */
 BacklogIssues.prototype.reset = function() {
   var text = Browser.msgBox("シートの情報をクリアしますか？", Browser.Buttons.OK_CANCEL);
@@ -441,7 +473,4 @@ BacklogIssues.prototype.reset = function() {
 
   this.view.reset();
   this.status.reset();
-
-  this.sidebar.reset();
-  this.sidebar.log("シートの内容と読み込み状態をクリアしました。");
 };

@@ -300,6 +300,20 @@ BacklogIssuesView.prototype.makeStatus = function(comments) {
 };
 
 /**
+ * スペース、プロジェクト行を表示するかどうか
+ */
+BacklogIssuesView.prototype.setPrintProjectRow = function(isPrint) {
+  this.isPrintProjectRow = isPrint;
+};
+
+/**
+ * 「状況」列の折り返しをするかどうか
+ */
+BacklogIssuesView.prototype.setWrap = function(isWrap) {
+  this.isWrap = isWrap;
+};
+
+/**
  * ヘッダーの出力
  */
 BacklogIssuesView.prototype.printHeader = function() {
@@ -321,35 +335,47 @@ BacklogIssuesView.prototype.printHeader = function() {
 /**
  * スペース情報の設定
  */
-BacklogIssuesView.prototype.setSpace = function(space) {
+BacklogIssuesView.prototype.setSpace = function(space, url) {
   this.space = space;
+  this.urlSpace = url;
 };
 
 /**
  * スペース情報の出力
  */
-BacklogIssuesView.prototype.printSpace = function(url) {
+BacklogIssuesView.prototype.printSpace = function() {
+  // 行を表示するモードでなければ表示しない
+  if (! this.isPrintProjectRow) {
+    return;
+  }
+
   // カラムが表示対象でなければ行も出力しない
   if (this.idxSpace == -1) {
     return;
   }
 
   this.iterator.offset(0, 0, 1, this.lenAttrs).setBackground(this.colors.space);
-  this.iterator.offset(0, this.idxSpace).setValue(this.toHiperlink(url, this.space.name));
+  this.iterator.offset(0, this.idxSpace).setValue(this.toHiperlink(this.urlSpace, this.space.name));
   this.iterator = this.iterator.offset(1, 0);
 };
 
 /**
  * プロジェクト情報の設定
  */
-BacklogIssuesView.prototype.setProject = function(project) {
+BacklogIssuesView.prototype.setProject = function(project, url) {
   this.project = project;
+  this.urlProject = url;
 };
 
 /**
  * プロジェクト情報の出力
  */
-BacklogIssuesView.prototype.printProject = function(url) {
+BacklogIssuesView.prototype.printProject = function() {
+  // 行を表示するモードでなければ表示しない
+  if (! this.isPrintProjectRow) {
+    return;
+  }
+
   // カラムが表示対象でなければ行も出力しない
   if (this.idxProject == -1) {
     return;
@@ -361,7 +387,7 @@ BacklogIssuesView.prototype.printProject = function(url) {
     this.iterator.offset(0, this.idxSpace)
     .setFontColor(this.colors.project).setValue(this.space.name);
   }
-  this.iterator.offset(0, this.idxProject).setValue(this.toHiperlink(url, this.project.name));
+  this.iterator.offset(0, this.idxProject).setValue(this.toHiperlink(this.urlProject, this.project.name));
   this.iterator = this.iterator.offset(1, 0);
 };
 
@@ -398,10 +424,20 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
 
     switch (name) {
       case "スペース":
-        columns[attr.index] = this.space.name;
+        if (this.isPrintProjectRow) {
+          columns[attr.index] = this.space.name;
+        }
+        else {
+          columns[attr.index] = this.toHiperlink(this.urlSpace, this.space.name);;
+        }
         break;
       case "プロジェクト":
-        columns[attr.index] = this.project.name;
+        if (this.isPrintProjectRow) {
+          columns[attr.index] = this.project.name;
+        }
+        else {
+          columns[attr.index] = this.toHiperlink(this.urlProject, this.project.name);;
+        }
         break;
       case "種別":
         columns[attr.index] = issue.issueType.name;
@@ -492,6 +528,11 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
   // 折り返し
   this.iterator.offset(0, 0, rows.length, columns.length).setWrap(true);
 
+  // 行を表示するモードでなければ表示しない
+  if (this.isWrap !== true) {
+    this.iterator.offset(0, idxStatus, rows.length, 1).setWrap(false);
+  }
+
   // 背景、完了を考慮
   var background = 'white';
   var background2 = null;
@@ -512,15 +553,18 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
 
   // 文字色
 
-  // 折り返しは対象外の列
-  // フィルタ用文字は背景色と同じ
-  if (this.idxSpace >= 0) {
-    this.iterator.offset(0, this.idxSpace, rows.length, 1)
-    .setWrap(false).setFontColor(background);
-  }
-  if (this.idxProject >= 0) {
-    this.iterator.offset(0, this.idxProject, rows.length, 1)
-    .setWrap(false).setFontColor(background);
+  // スペース／プロジェクトは異なる制御
+  if (this.isPrintProjectRow) {
+    // 文字列の折り返しが対象外の列
+    // フィルタ用文字は背景色と同じ
+    if (this.idxSpace >= 0) {
+      this.iterator.offset(0, this.idxSpace, rows.length, 1)
+      .setWrap(false).setFontColor(background);
+    }
+    if (this.idxProject >= 0) {
+      this.iterator.offset(0, this.idxProject, rows.length, 1)
+      .setWrap(false).setFontColor(background);
+    }
   }
   // 最新は強調表示
   if (recentCreated) {
@@ -553,6 +597,48 @@ BacklogIssuesView.prototype.resize = function() {
   }
   // 日本語が小さくリサイズされる
   // this.sheet.autoResizeColumns(1, this.attrs.length - 1);
+};
+
+/**
+ * 行の高さを調整するため、必要な列の折り返しを制御する
+ * ・「状況」列
+ */
+BacklogIssuesView.prototype.setWraps = function(isWrap) {
+  var numRows = this.sheet.getDataRange().getLastRow() - 1; // ヘッダ分
+  // データ行が無ければ何もしない
+  if (numRows < 1) {
+    return;
+  }
+
+  var column = this.indexOfAttr("状況") + 1; // 0 origin
+  var wraps = [];
+  for (var i = 0; i < numRows; i ++) {
+    wraps.push([ isWrap ]);
+  }
+  var range = this.sheet.getRange(2, column, numRows, 1);
+  range.setWraps(wraps);
+};
+
+/**
+ * シートの高さを指定値で1行ずつリサイズする
+ * ※正常に動作しない
+ * @see https://issuetracker.google.com/issues/121054553
+ */
+BacklogIssuesView.prototype.resizeRows = function(size) {
+  var range = this.sheet.getRange(2, 1);
+  var last = this.sheet.getDataRange().getLastRow();
+  while (true) {
+    var row = range.getRow();
+    if (row >= last) {
+      break;
+    }
+    var height = this.sheet.getRowHeight(row);
+    if (height > size) {
+      this.sheet.setRowHeight(row, size);
+    }
+
+    range = range.offset(1, 0);
+  }
 };
 
 /**

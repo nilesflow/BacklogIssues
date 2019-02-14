@@ -201,7 +201,7 @@ BacklogIssuesView.prototype.substrComment = function(content) {
   if (!isNaN(max) && 0 < max) {
     // 最大値以上だったら切り詰め
     if (content.length > max) {
-      content = content.substr(0, max) + "\n...（省略）";      
+      content = content.substr(0, max) + "\n...（省略）";
     }
   }
   return content;
@@ -214,7 +214,7 @@ BacklogIssuesView.prototype.substrComment = function(content) {
 BacklogIssuesView.prototype.makeChangeLog = function(changeLog) {
   var originalValue = (changeLog.originalValue == null) ? '未設定' : changeLog.originalValue;
   var newValue = (changeLog.newValue == null) ? '未設定' : changeLog.newValue;
-  return originalValue + "→" + newValue + "\n";
+  return originalValue + "→" + newValue;
 }
 
 /**
@@ -223,24 +223,24 @@ BacklogIssuesView.prototype.makeChangeLog = function(changeLog) {
  */
 BacklogIssuesView.prototype.makeChangeLogs = function(changeLogs) {
   var self = this;
-  var changeLog = '';
+  var logs = [];
 
   changeLogs.forEach(function(log) {
     switch (log.field) {
       case 'component':
-        changeLog += "[カテゴリー] " + self.makeChangeLog(log);
+        logs.push("[カテゴリー] " + self.makeChangeLog(log));
         break;
       case 'milestone':
-        changeLog += "[マイルストーン] " + self.makeChangeLog(log);
+        logs.push("[マイルストーン] " + self.makeChangeLog(log));
         break;
       case 'status':
-        changeLog += "[状態] " + self.makeChangeLog(log);
+        logs.push("[状態] " + self.makeChangeLog(log));
         break;
       case 'limitDate':
-        changeLog += "[期限日] " + self.makeChangeLog(log);
+        logs.push("[期限日] " + self.makeChangeLog(log));
         break;
       case 'resolution':
-        changeLog += "[完了理由] " + self.makeChangeLog(log);
+        logs.push("[完了理由] " + self.makeChangeLog(log));
         break;
       case 'attachment':
         // 省略
@@ -250,7 +250,7 @@ BacklogIssuesView.prototype.makeChangeLogs = function(changeLogs) {
     }
   });
 
-  return changeLog;
+  return logs.join("\n");
 };
 
 /**
@@ -259,30 +259,36 @@ BacklogIssuesView.prototype.makeChangeLogs = function(changeLogs) {
  */
 BacklogIssuesView.prototype.makeStatus = function(comments) {
   var contents = [];
-  var content;
-  var value;
+  var header, changeLog, content;
+  var values;
   var comment;
-  var changeLog;
   var recent = false;
 
   for (var i in comments) {
     comment = comments[i];
+    values = [];
 
     // 変更履歴？
     changeLog = this.makeChangeLogs(comment.changeLog);
+    if (changeLog != "") {
+      values.push(changeLog);
+    }
 
     // コメントを最大表示文字数で切る
     content = this.substrComment(comment.content);
+    if (content != "") {
+      values.push(content);
+    }
 
     // どちらも無ければ処理しない
-    if (changeLog == "" && content == "") {
+    if (values.length == 0) {
       continue;
     }
     
     // コメント生成
-    value  = "(" + this.toDate(comment.updated) + " " + comment.createdUser.name + ")\n"
-    value += changeLog + content;
-    contents.push(value);
+    header = "(" + this.toDate(comment.updated) + " " + comment.createdUser.name + ")";
+    values.unshift(header);
+    contents.push(values.join("\n"));
 
     // 最新なら強調表示指定（セル単位でしか色変更できない）
     if (this.isRecent(comment.updated)) {
@@ -381,7 +387,10 @@ BacklogIssuesView.prototype.printProject = function() {
     return;
   }
 
-  this.iterator.offset(0, 0, 1, this.lenAttrs).setBackground(this.colors.project);
+  // アーカイブ済みかどうかで背景色を変更
+  var color = (this.project.archived) ? this.colors.completed : this.colors.project;
+  this.iterator.offset(0, 0, 1, this.lenAttrs).setBackground(color);
+
   // スペース関連設定
   if (this.idxSpace != -1) {
     this.iterator.offset(0, this.idxSpace)
@@ -474,7 +483,7 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
         columns[attr.index] = this.applyHiperLink(issue.milestone, milestoneUrls);
         break;
       case "登録日":
-        recent = this.isRecent(issue.created);
+        recentCreated = this.isRecent(issue.created);
         columns[attr.index] = this.toDate(issue.created);
         break;
       case "期限日":
@@ -524,48 +533,45 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
   rows.push(columns);
 
   // 上寄せ指定
-  this.iterator.offset(0, 0, rows.length, columns.length).setVerticalAlignment('top');
+  this.iterator.offset(0, 0, rows.length, columns.length)
+  .setVerticalAlignment('top')
   // 折り返し
-  this.iterator.offset(0, 0, rows.length, columns.length).setWrap(true);
+  .setWrap(true)
+  // 表示形式のリセット（であるはず）
+  .setNumberFormat("")
+  ;
 
-  // 行を表示するモードでなければ表示しない
+  // 折り返しで行の高さを調節
   if (this.isWrap !== true) {
     this.iterator.offset(0, idxStatus, rows.length, 1).setWrap(false);
   }
 
   // 背景、完了を考慮
-  var background = 'white';
-  var background2 = null;
+  var bgBase = 'white';
+  var bgDueDate = null;
+  var bgProject;
   if (completed) {
-    background = this.colors.completed;
+    bgBase = this.colors.completed;
+    bgProject = bgBase;
   }
-  else if (expired) {
-    background2 = this.colors.expired;
+  else {
+    if (expired) {
+      bgDueDate = this.colors.expired;
+    }
+    else if (nearing) {
+      bgDueDate = this.colors.nearing;
+    }
+    // アーカイブプロジェクトの表現
+    bgProject = (this.project.archived) ? this.colors.completed : bgBase;
   }
-  else if (nearing) {
-    background2 = this.colors.nearing;
-  }
-  this.iterator.offset(0, 0, rows.length, columns.length).setBackground(background);
+  this.iterator.offset(0, 0, rows.length, columns.length).setBackground(bgBase);
   // 強調表示
-  if (background2 != null) {
-    this.iterator.offset(0, idxDueDate, rows.length, 1).setBackground(background2);
+  if (bgDueDate != null) {
+    this.iterator.offset(0, idxDueDate, rows.length, 1).setBackground(bgDueDate);
   }
 
   // 文字色
 
-  // スペース／プロジェクトは異なる制御
-  if (this.isPrintProjectRow) {
-    // 文字列の折り返しが対象外の列
-    // フィルタ用文字は背景色と同じ
-    if (this.idxSpace >= 0) {
-      this.iterator.offset(0, this.idxSpace, rows.length, 1)
-      .setWrap(false).setFontColor(background);
-    }
-    if (this.idxProject >= 0) {
-      this.iterator.offset(0, this.idxProject, rows.length, 1)
-      .setWrap(false).setFontColor(background);
-    }
-  }
   // 最新は強調表示
   if (recentCreated) {
     this.iterator.offset(0, 0, rows.length, columns.length).setFontColor(this.colors.recent);
@@ -575,6 +581,26 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
   }
   if (recentCommented) {
     this.iterator.offset(0, idxStatus, rows.length, 1).setFontColor(this.colors.recent);
+  }
+  // スペース／プロジェクトは異なる制御
+  if (this.isPrintProjectRow) {
+    // 文字列の折り返しが対象外の列
+    // フィルタ用文字は背景色と同じ
+    if (this.idxSpace >= 0) {
+      this.iterator.offset(0, this.idxSpace, rows.length, 1)
+      .setWrap(false).setFontColor(bgBase);
+    }
+    if (this.idxProject >= 0) {
+      this.iterator.offset(0, this.idxProject, rows.length, 1)
+      .setWrap(false).setFontColor(bgBase);
+    }
+  }
+  else {
+    // アーカイブの表現
+    if (this.idxProject >= 0) {
+      this.iterator.offset(0, this.idxProject, rows.length, 1)
+      .setWrap(false).setBackground(bgProject);
+    }
   }
 
   // 最後に値を表示

@@ -11,12 +11,34 @@ function Backlog(param) {
 }
 
 /**
+ * 名称に対応するソートキーを取得
+ * @see https://developer.nulab-inc.com/ja/docs/backlog/api/2/get-issue-list/
+ */
+Backlog.prototype.getSortKey = function(name) {
+  var sortKeys = {
+    "種別" : "issueType",
+    "キー" : null,
+    "件名" : "summary",
+    "担当者" : "assignee",
+    "状態" : "status",
+    "優先度" : "priority",
+    "カテゴリー" : "category",
+    "マイルストーン" : "milestone",
+    "登録日" : "created",
+    "期限日" : "dueDate",
+    "更新日" : "updated",
+    "登録者" : "createdUser",
+  };
+
+  return sortKeys[name];
+};
+
+/**
  * Hostを取得
  */
 Backlog.prototype.getHost = function() {
   return this.host;
 };
-
 
 /**
  * Projectの設定
@@ -114,7 +136,7 @@ Backlog.prototype.getSpace = function(params) {
 Backlog.prototype.getProjects = function(params) {
   var url = this.url + '/api/v2/projects';
   return this.request(url, {
-    archived: false, // 非アーカイブ
+    archived: (params.archived) ? null : false, // 全て or 非アーカイブ
 // 管理者権限の場合のみ、有効
 //    all : true, // 全てのプロジェクト
   });
@@ -140,6 +162,7 @@ Backlog.prototype.getIssues = function(params) {
   return this.request(url, {
     projectId: projectId,
     order : params.order,
+    sort : params.sort,
     statusId : params.statusId,
     offset : params.offset,
     count : params.count,

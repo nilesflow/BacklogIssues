@@ -237,11 +237,13 @@ BacklogIssues.prototype.printIssues = function(backlog, issues) {
   var offset = 0;
   var count = 100; // 最大値で指定
   var updatedSince = this.getUpdatedSince();
+  var sort = backlog.getSortKey(this.config.issues.sort);
 
   do {
     issues = backlog.getIssues({
       // projectIDは事前に設定
-      order : 'asc',
+      order : this.config.issues.order,
+      sort : sort,
       // statusId : [1, 2, 3], // 完了も含める
       offset : offset,
       count : count,
@@ -288,7 +290,9 @@ BacklogIssues.prototype.printProjects = function(backlog) {
   var host = backlog.getHost();
 
   // プロジェクト一覧
-  projects = backlog.getProjects();
+  projects = backlog.getProjects({
+    archived : this.settings.archived, // 全て or 非アーカイブ
+  });
 
   // サイドバー表示
   this.tellProjects(host, projects.length);
@@ -394,7 +398,9 @@ BacklogIssues.prototype.load = function(param) {
   // スペース毎のプロジェクト情報を読み込み
   this.backlogs.forEach(function(backlog) {
     // プロジェクト一覧を取得
-    projects = backlog.getProjects();    
+    projects = backlog.getProjects({
+      archived : self.settings.archived, // 全て or 非アーカイブ
+    });
 
     // 状態管理クラスに設定
     self.status.setProjects(
@@ -473,4 +479,7 @@ BacklogIssues.prototype.reset = function() {
 
   this.view.reset();
   this.status.reset();
+
+  // リサイズもしてしまう
+  this.view.resize();
 };

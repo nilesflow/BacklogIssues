@@ -128,6 +128,14 @@ function reset() {
 }
 
 /**
+ *
+ */
+function about() {
+  var output = HtmlService.createHtmlOutputFromFile('About');
+  SpreadsheetApp.getUi().showModalDialog(output, "このスプレッドシートについて");
+}
+
+/**
  * メニューを設定
  */
 function setMenu() {
@@ -162,5 +170,7 @@ function setMenu() {
   .addItem('行、列のサイズをリセット', 'resize')
   .addSubMenu(subMenu2)
   .addItem('シートの内容を全てクリア', 'reset')
+  .addSeparator()
+  .addItem('このスプレッドシートについて..', 'about')
   .addToUi()
 }

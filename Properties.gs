@@ -10,18 +10,17 @@ function Properties() {
  */
 Properties.prototype.getPrintSpaceProject = function() {
   var prop = this.props.getProperty("isPrintSpaceProject");
-  if (prop == null || prop != "true") {
-    return false;
+  if (prop == "true") {
+    return true
   }
-
-  return true;
+  return false;
 };
 
 /**
  * スペース／プロジェクトの表示
  */
 Properties.prototype.setPrintSpaceProject = function(isPrint) {
-  this.props.setProperty("isPrintSpaceProject", isPrint);
+  this.props.setProperty("isPrintSpaceProject", isPrint.toString());
 };
 
 /**

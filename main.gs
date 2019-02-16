@@ -156,11 +156,11 @@ function setMenu() {
 
   ui.createMenu('Backlog')
   .addItem('Backlogから課題情報を読み込み', 'load')
+  .addSeparator()
   .addSubMenu(subMenu)
   .addSeparator()
   .addItem('行、列のサイズをリセット', 'resize')
   .addSubMenu(subMenu2)
-  .addSeparator()
   .addItem('シートの内容を全てクリア', 'reset')
   .addToUi()
 }

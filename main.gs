@@ -128,7 +128,7 @@ function reset() {
 }
 
 /**
- *
+ * Aboutの表示
  */
 function about() {
   var output = HtmlService.createHtmlOutputFromFile('About');
@@ -142,35 +142,39 @@ function setMenu() {
   var ui = SpreadsheetApp.getUi();
   var props = new Properties();
 
+  // 開発中はライブラリではなく、自身の関数を読み込むため
+  var name = ScriptProperties.getProperty("ProjectName");
+  var prefix = (name === 'BacklogIssuesLibrary') ? "" : "BacklogIssuesLibrary.";
+
   var subMenu = ui.createMenu("スペース／プロジェクト行の表示...");
   if (props.getPrintSpaceProject()) {
-    subMenu.addItem("✔　表示する", "setPrintSpaceProject")
-    subMenu.addItem("　　表示しない", "unsetPrintSpaceProject")
+    subMenu.addItem("✔　表示する", prefix + "setPrintSpaceProject")
+    subMenu.addItem("　　表示しない", prefix + "unsetPrintSpaceProject")
   }
   else {
-    subMenu.addItem("　　表示する", "setPrintSpaceProject")
-    subMenu.addItem("✔　表示しない", "unsetPrintSpaceProject")
+    subMenu.addItem("　　表示する", prefix + "setPrintSpaceProject")
+    subMenu.addItem("✔　表示しない", prefix + "unsetPrintSpaceProject")
   }
 
   var subMenu2 = ui.createMenu("「状況」列の高さを調整...");
   if (props.getWrap()) {
-    subMenu2.addItem("✔　テキストを折り返す", "setWraps")
-    subMenu2.addItem("　　テキストを折り返さない", "unsetWraps")
+    subMenu2.addItem("✔　テキストを折り返す", prefix + "setWraps")
+    subMenu2.addItem("　　テキストを折り返さない", prefix + "unsetWraps")
   }
   else {
-    subMenu2.addItem("　　テキストを折り返す", "setWraps")
-    subMenu2.addItem("✔　テキストを折り返さない", "unsetWraps")
+    subMenu2.addItem("　　テキストを折り返す", prefix + "setWraps")
+    subMenu2.addItem("✔　テキストを折り返さない", prefix + "unsetWraps")
   }
 
   ui.createMenu('Backlog')
-  .addItem('Backlogから課題情報を読み込み', 'load')
+  .addItem('Backlogから課題情報を読み込み', prefix + 'load')
   .addSeparator()
   .addSubMenu(subMenu)
   .addSeparator()
-  .addItem('行、列のサイズをリセット', 'resize')
+  .addItem('行、列のサイズをリセット', prefix + 'resize')
   .addSubMenu(subMenu2)
-  .addItem('シートの内容を全てクリア', 'reset')
+  .addItem('シートの内容を全てクリア', prefix + 'reset')
   .addSeparator()
-  .addItem('このスプレッドシートについて..', 'about')
+  .addItem('このスプレッドシートについて..', prefix + 'about')
   .addToUi()
 }

@@ -1,6 +1,11 @@
 {
   "timeZone": "Asia/Tokyo",
   "dependencies": {
+    "libraries": [{
+      "userSymbol": "BacklogIssuesLibrary",
+      "libraryId": "19FERzIRFhMQiDFiFwVvpYne2q3EZrNtRn2wN7pLRf5B6CG4WNBtkJs8d",
+      "version": "6"
+    }]
   },
   "exceptionLogging": "STACKDRIVER",
   "executionApi": {

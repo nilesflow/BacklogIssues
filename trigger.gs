@@ -8,5 +8,5 @@
  * @callback
  */
 function onOpen() {
-  setMenu();
+  loadMenu();
 }

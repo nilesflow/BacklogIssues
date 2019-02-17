@@ -138,7 +138,7 @@ function about() {
 /**
  * メニューを設定
  */
-function setMenu() {
+function loadMenu() {
   var ui = SpreadsheetApp.getUi();
   var props = new Properties();
 

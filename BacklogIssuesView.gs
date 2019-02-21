@@ -95,6 +95,10 @@ BacklogIssuesView.prototype.isRecentDay = function(date, day) {
   if (date == null) {
     return ret;
   }
+  // 数値かどうか（正しく計算できるか）を判定、できなければデフォルト表示
+  if (day !== Number(day)) {
+    return true;
+  }
 
   var d = new Date(date);
   var dRecent = new Date(d.getTime() + day * 24 * 60 * 60 * 1000);

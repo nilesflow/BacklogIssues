@@ -167,6 +167,7 @@ Backlog.prototype.getIssues = function(params) {
     offset : params.offset,
     count : params.count,
     updatedSince : params.updatedSince,
+    updatedUntil : params.updatedUntil,
   });
 };
 

@@ -211,17 +211,67 @@ BacklogIssues.prototype.tellError = function() {
 };
 
 /**
- * 進捗表示：エラー終了
+ * 課題の検索条件を返却
+ * 完了が直近、非完了が全て、に近いことを想定して、2パターンに分けて取得するための条件を返却
  * @protected
  */
-BacklogIssues.prototype.getUpdatedSince = function() {
-  var issues = this.config.issues;
-  var max = Math.max(issues.dayHideCompleted, issues.dayHideActive);
+BacklogIssues.prototype.getupdateDates = function() {
+  var updateDates = [];
 
-  var d = new Date();
-  d = new DateEx(d.getTime() - (max * 24 * 60 * 60 * 1000));
+  var active = this.config.issues.dayHideActive;
+  var completed = this.config.issues.dayHideCompleted;
   
-  return d.getDateStr('-');
+  var day = dayLast = null;
+  var ids = idsLast = [1, 2, 3]; // 完了以外
+  var idsComp = [4]; // 完了
+
+  // 過去X日 -> 日時変換関数
+  var toDate = function(day) {
+    if (day == null) {
+      return day;
+    }
+    var d = new Date();
+    d = new DateEx(d.getTime() - (day * 24 * 60 * 60 * 1000));
+    return d.getDateStr('-');
+  };
+
+  // 非完了タスクはデフォルト全読み込み、指定日が有る場合に指定する
+  if (active === Number(active)) {
+    day = active;
+  }
+
+  // 完了タスクはデフォルト読み込み無し、指定日が有る場合に取得される
+  if (completed === Number(completed)) {
+    // 完了タスクも対象にする
+    ids = ids.concat(idsComp);
+
+    if (active === Number(active)) {
+      // 非完了日付が古ければ、1回目：完了の指定日まで。2回目：非完了の指定日まで。
+      if (active > completed) {
+        day = completed;
+        dayLast = active;
+      }
+      // 完了日付が古ければ、1回目：非完了の指定日まで。2回目：完了の指定日まで。
+      else if (completed > active) {
+        dayLast = completed;
+        idsLast = idsComp;
+      }
+      // 同日なら、1回：完了／非完了両方。
+    }
+    // 非完了の指定日がなければ、1回目：完了の指定日まで。2回目：完了で指定日無し
+    else {
+      day = completed;
+      dayLast = null;
+    }
+  }
+
+  // 前半
+  updateDates.push({updatedSince : toDate(day), updatedUntil : null, statusId : ids});
+  // 2つに分かれる場合は後半の条件を設定（完了指定があり、完了／非完了の指定日が同日ではない場合）
+  if (active != completed && (day == completed || dayLast == completed)) {
+    updateDates.push({updatedSince : toDate(dayLast), updatedUntil : toDate(day + 1), statusId : idsLast});
+  }
+  return updateDates;
 };
 
 /**
@@ -234,51 +284,58 @@ BacklogIssues.prototype.printIssues = function(backlog, issues) {
   var milestoneUrls = {};  // idが大きくなるのでオブジェクトで
 
   // プロジェクト毎に課題一覧を取得
-  var offset = 0;
+  var offset;
   var count = 100; // 最大値で指定
-  var updatedSince = this.getUpdatedSince();
-  var sort = backlog.getSortKey(this.config.issues.sort);
+  var updateDates = this.getupdateDates();
+  var sort = backlog.getSortKey(this.config.issues.sort);  // 項目名から検索用キーに変換
 
-  do {
-    issues = backlog.getIssues({
-      // projectIDは事前に設定
-      order : this.config.issues.order,
-      sort : sort,
-      // statusId : [1, 2, 3], // 完了も含める
-      offset : offset,
-      count : count,
-      updatedSince : updatedSince
-    });
-    offset += count;
-    
-    for (var i in issues) {
-      issue = issues[i];
-      
-      // 課題毎のURLを生成
-      url = backlog.buildUrlIssue(issue.issueKey);
-      
-      // カテゴリURLの生成
-      issue.category.forEach(function(category) {
-        categoryUrls[category.id] = backlog.buildUrlCetegory(category.id);
+  // 完了／非完了の日付を考慮して分けて取得する
+  for (var cnt in updateDates) {
+    dates =  updateDates[cnt];
+    offset = 0;
+
+    do {
+      issues = backlog.getIssues({
+        // projectIDは事前に設定
+        order : this.config.issues.order,
+        sort : sort,
+        offset : offset,
+        count : count,
+        statusId : dates.statusId,
+        updatedSince : dates.updatedSince,
+        updatedUntil : dates.updatedUntil,
       });
+      offset += count;
+
+      for (var i in issues) {
+        issue = issues[i];
+
+        // 課題毎のURLを生成
+        url = backlog.buildUrlIssue(issue.issueKey);
+
+        // カテゴリURLの生成
+        issue.category.forEach(function(category) {
+          categoryUrls[category.id] = backlog.buildUrlCetegory(category.id);
+        });
+
+        // マイルストーンURLの生成
+        issue.milestone.forEach(function(milestone) {
+          milestoneUrls[milestone.id] = backlog.buildUrlVersion(milestone.id);
+        });
+
+        // コメントはBacklogから取得
+        comments = backlog.getIssueComments(issue.issueKey, {
+          count : Math.min(this.config.comments.maxRequest, 100),
+          order : 'desc',
+        });
+
+        // 課題を表示
+        this.view.printIssue(issue, url, comments, categoryUrls, milestoneUrls);
+      }
       
-      // マイルストーンURLの生成
-      issue.milestone.forEach(function(milestone) {
-        milestoneUrls[milestone.id] = backlog.buildUrlVersion(milestone.id);
-      });
-      
-      // コメントはBacklogから取得
-      comments = backlog.getIssueComments(issue.issueKey, {
-        count : Math.min(this.config.comments.maxRequest, 100),
-        order : 'desc',
-      });
-      
-      // 課題を表示
-      this.view.printIssue(issue, url, comments, categoryUrls, milestoneUrls);
-    }
-    
-    // 取得数と同じ（=残りがある可能性がある）場合に、再読み込み
-  } while (issues.length == count);
+      // 取得数と同じ（=残りがある可能性がある）場合に、再読み込み
+    } while (issues.length == count);
+  }
 };
 
 /**

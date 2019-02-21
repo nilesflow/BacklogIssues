@@ -1,14 +1,14 @@
 # BacklogIssues
 
-本ソースは`Google App Script`の ライブラリとして存在している。  
+本ソースは Google App Script の ライブラリとして存在している。  
 対応するスプレッドシートから本ライブラリの`main.gs`の各関数をコールしている。  
 
 ## スプレッドシートの使い方
 - 下記のスプレッドシートをコピー  
 https://docs.google.com/spreadsheets/d/1qa8MxYjjgXQ-aV1UEHGKFI77a6rF581RlBSknV7xFQ4/edit#gid=1194134501
 
-- 「config」シートに`backlog`の host, APIキー を入力  
-※APIキーは、`backlog`の「個人設定」「API」「新しいAPIキーを発行」から「登録」で作成
+- 「config」シートに backlog の host, APIキー を入力  
+※APIキーは、backlog の「個人設定」「API」「新しいAPIキーを発行」から「登録」で作成
 
 - 必要に応じて、「config」シートの各値を修正
 
@@ -44,7 +44,7 @@ https://docs.google.com/spreadsheets/d/1qa8MxYjjgXQ-aV1UEHGKFI77a6rF581RlBSknV7x
 
 ### メニュー機能
 - 複数回に分けての課題の分割取得  
-  ※`Google App Script`の最大実行時間対策
+  ※ Google App Script の最大実行時間対策
 - 表示内容（及び、読み込み状態）のクリア
 - 行／列サイズのリセット
 - 折り返し指定切り替えによる「状況」列の高さ調節機能

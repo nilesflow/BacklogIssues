@@ -138,13 +138,12 @@ function about() {
 /**
  * メニューを設定
  */
-function loadMenu() {
+function loadMenu(isOwn) {
   var ui = SpreadsheetApp.getUi();
   var props = new Properties();
 
   // 開発中はライブラリではなく、自身の関数を読み込むため
-  var name = ScriptProperties.getProperty("ProjectName");
-  var prefix = (name === 'BacklogIssuesLibrary') ? "" : "BacklogIssuesLibrary.";
+  var prefix = (isOwn === true) ? "" : "BacklogIssuesLibrary.";
 
   var subMenu = ui.createMenu("スペース／プロジェクト行の表示...");
   if (props.getPrintSpaceProject()) {

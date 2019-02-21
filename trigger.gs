@@ -8,5 +8,6 @@
  * @callback
  */
 function onOpen() {
-  loadMenu();
+  // 自分自身の呼び出しを指定
+  loadMenu(true); 
 }

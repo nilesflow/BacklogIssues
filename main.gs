@@ -78,7 +78,7 @@ function load() {
 function setPrintSpaceProject() {
   var props = new Properties();
   props.setPrintSpaceProject("true");
-  setMenu();
+  onOpen();
 }
 
 /**
@@ -87,7 +87,7 @@ function setPrintSpaceProject() {
 function unsetPrintSpaceProject() {
   var props = new Properties();
   props.setPrintSpaceProject("false");
-  setMenu();
+  onOpen();
 }
 
 
@@ -105,7 +105,7 @@ function setWraps() {
   var props = new Properties();
   props.setWrap(true);
 
-  setMenu();
+  onOpen();
   run('setWraps');
 }
 
@@ -116,7 +116,7 @@ function unsetWraps() {
   var props = new Properties();
   props.setWrap(false);
 
-  setMenu();
+  onOpen();
   run('unsetWraps');
 }
 

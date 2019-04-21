@@ -76,18 +76,16 @@ function load() {
  * スペース／プロジェクト行を表示
  */
 function setPrintSpaceProject() {
-  var props = new Properties();
-  props.setPrintSpaceProject("true");
-  onOpen();
+  new Properties().setPrintSpaceProject("true");
+  loadMenu();
 }
 
 /**
  * スペース／プロジェクト行を表示しない
  */
 function unsetPrintSpaceProject() {
-  var props = new Properties();
-  props.setPrintSpaceProject("false");
-  onOpen();
+  new Properties().setPrintSpaceProject("false");
+  loadMenu();
 }
 
 
@@ -102,10 +100,9 @@ function resize() {
  * 行の高さを最小に
  */
 function setWraps() {
-  var props = new Properties();
-  props.setWrap(true);
+  new Properties().setWrap(true);
+  loadMenu();
 
-  onOpen();
   run('setWraps');
 }
 
@@ -113,10 +110,9 @@ function setWraps() {
  * 行の高さを最小に
  */
 function unsetWraps() {
-  var props = new Properties();
-  props.setWrap(false);
+  new Properties().setWrap(false);
+  loadMenu();
 
-  onOpen();
   run('unsetWraps');
 }
 
@@ -138,12 +134,12 @@ function about() {
 /**
  * メニューを設定
  */
-function loadMenu(isOwn) {
+function loadMenu() {
   var ui = SpreadsheetApp.getUi();
   var props = new Properties();
 
   // 開発中はライブラリではなく、自身の関数を読み込むため
-  var prefix = (isOwn === true) ? "" : "BacklogIssuesLibrary.";
+  var prefix = (props.getOwner() === true) ? "" : "BacklogIssuesLibrary.";
 
   var subMenu = ui.createMenu("スペース／プロジェクト行の表示...");
   if (props.getPrintSpaceProject()) {

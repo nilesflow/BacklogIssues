@@ -57,3 +57,21 @@ Properties.prototype.getWrap = function() {
 Properties.prototype.setWrap = function(isWrap) {
   this.props.setProperty("wrap", isWrap.toString());
 };
+
+/**
+ * ライブラリ自身かどうか（デバッグ用）
+ */
+Properties.prototype.getOwner = function() {
+  var prop = this.props.getProperty("owner");
+  if (prop == "true") {
+    return true
+  }
+  return false;
+};
+
+/**
+ * ライブラリ自身かどうか（デバッグ用）
+ */
+Properties.prototype.setOwner = function(isOwn) {
+  this.props.setProperty("owner", isOwn.toString());
+};

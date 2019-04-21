@@ -59,6 +59,42 @@ Properties.prototype.setWrap = function(isWrap) {
 };
 
 /**
+ * 自動読み込み
+ */
+Properties.prototype.getAutoLoad = function() {
+  var prop = this.props.getProperty("autoLoad");
+  if (prop == "true") {
+    return true
+  }
+  return false;
+};
+
+/**
+ * 自動読み込み
+ */
+Properties.prototype.setAutoLoad = function(isAuto) {
+  this.props.setProperty("autoLoad", isAuto.toString());
+};
+
+/**
+ * 自動バックアップ
+ */
+Properties.prototype.getAutoBackup = function() {
+  var prop = this.props.getProperty("autoBackup");
+  if (prop == "true") {
+    return true
+  }
+  return false;
+};
+
+/**
+ * 自動バックアップ
+ */
+Properties.prototype.setAutoBackup = function(isBackup) {
+  this.props.setProperty("autoBackup", isBackup.toString());
+};
+
+/**
  * ライブラリ自身かどうか（デバッグ用）
  */
 Properties.prototype.getOwner = function() {

@@ -4,10 +4,11 @@
     "libraries": [{
       "userSymbol": "BacklogIssuesLibrary",
       "libraryId": "19FERzIRFhMQiDFiFwVvpYne2q3EZrNtRn2wN7pLRf5B6CG4WNBtkJs8d",
-      "version": "6"
+      "version": "14"
     }]
   },
   "exceptionLogging": "STACKDRIVER",
+  "oauthScopes": ["https://www.googleapis.com/auth/script.container.ui", "https://www.googleapis.com/auth/script.external_request", "https://www.googleapis.com/auth/script.scriptapp", "https://www.googleapis.com/auth/spreadsheets"],
   "executionApi": {
     "access": "ANYONE"
   }

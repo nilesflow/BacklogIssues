@@ -233,12 +233,59 @@ Status.prototype.getCountProject = function(host, isMarked) {
 };
 
 /**
+ * 全て読み込み済みかどうか
+ * @return 0 全て未処理
+ * @return 1 読み込み中
+ * @return 2 全て読み込み済み
+ * @return -1 それ以外（データが無い等）
+ */
+Status.prototype.getStatus = function() {
+  var isSet = false;
+  var isUnset = false;
+  var result = -1;
+
+  for (var i in this.statuses) {
+    if (this.statuses[i][this.COLUMNS.STATUS] == 1) {
+      isSet = true;
+    }
+    else {
+      isUnset = true;
+    }
+  };
+
+  if (isSet && isUnset) {
+    result = 1;
+  }
+  else if (isSet) {
+    result = 2;
+  }
+  else if (isUnset) {
+    result = 0;
+  }
+
+  return result;
+};
+
+/**
  * 初回の読み込みかどうか
  * = 全て未読み込みかどうかを判定
  */
 Status.prototype.isFirst = function() {
   for (var i in this.statuses) {
     if (this.statuses[i][this.COLUMNS.STATUS] == 1) {
+      return false;
+    }
+  };
+
+  return true;
+};
+
+/**
+ * 全て読み込み済みかどうか
+ */
+Status.prototype.isComplete = function() {
+  for (var i in this.statuses) {
+    if (this.statuses[i][this.COLUMNS.STATUS] == 0) {
       return false;
     }
   };

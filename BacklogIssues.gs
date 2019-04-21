@@ -22,6 +22,9 @@ function BacklogIssues(params) {
     issues : config.issues,
   });
 
+  // シート情報を保持
+  this.sheets = params.sheets;
+
   // コンフィグをそのまま保持
   this.config = {
     comments : config.comments,
@@ -36,9 +39,30 @@ function BacklogIssues(params) {
   // Backlog APIクラス生成
   this.backlogs = this.createBacklog(config.spaces);
 
+  // トリガー操作クラス
+  this.trigger = new TriggerUtil();
+
   // サイドバー表示クラス
   this.sidebar = null;
 }
+
+/**
+ * 曜日変換
+ * @protected
+ */
+BacklogIssues.prototype.getWeekday = function(str) {
+  var matrix = {
+    "月曜日" : ScriptApp.WeekDay.MONDAY,
+    "火曜日" : ScriptApp.WeekDay.TUESDAY,
+    "水曜日" : ScriptApp.WeekDay.WEDNESDAY,
+    "木曜日" : ScriptApp.WeekDay.THURSDAY,
+    "金曜日" : ScriptApp.WeekDay.FRIDAY,
+    "土曜日" : ScriptApp.WeekDay.SATURDAY,
+    "日曜日" : ScriptApp.WeekDay.SUNDAY,
+  };
+
+  return matrix[str];
+};
 
 /**
  * 処理時間計測Start用
@@ -444,7 +468,9 @@ BacklogIssues.prototype.load = function(param) {
   var self = this;
 
   // 進捗表示サイドバー
-  this.sidebar = new SidebarProgress();
+  this.sidebar = new SidebarProgress({
+    isBackground: param.isBackground,
+  });
   this.tellBegin();
 
   // スペース／プロジェクト行の表示有無
@@ -470,13 +496,15 @@ BacklogIssues.prototype.load = function(param) {
   this.status.sync();
 
   // 設定したプロジェクト情報の一致を確認
-  if (! this.status.equalProject()) {
-    var text = Browser.msgBox("スペース／プロジェクト情報が更新されています。リセットしますか？", Browser.Buttons.OK_CANCEL);
-    if (text == "ok") {
-      // リセット処理
-      this.reset();
+  if (param.isBackground !== true) {
+    if (! this.status.equalProject()) {
+      var text = Browser.msgBox("スペース／プロジェクト情報が更新されています。リセットしますか？", Browser.Buttons.OK_CANCEL);
+      if (text == "ok") {
+        // リセット処理
+        this.reset();
+      }
+      throw new Exit('スペース／プロジェクト情報が更新されているので、終了します。');
     }
-    throw new Exit('スペース／プロジェクト情報が更新されているので、終了します。');
   }
 
   // サイドバー表示
@@ -527,11 +555,13 @@ BacklogIssues.prototype.setMaxRowSize = function(size) {
  * 関連シートを全てクリアする
  * main.gs からコールされる
  */
-BacklogIssues.prototype.reset = function() {
-  var text = Browser.msgBox("シートの情報をクリアしますか？", Browser.Buttons.OK_CANCEL);
-  if (text != "ok") {
-    // リセット処理
-    return;
+BacklogIssues.prototype.reset = function(isConfirm) {
+  if (isConfirm === true) {
+    var text = Browser.msgBox("シートの情報をクリアしますか？", Browser.Buttons.OK_CANCEL);
+    if (text != "ok") {
+      // リセット処理
+      return;
+    }
   }
 
   this.view.reset();
@@ -539,4 +569,78 @@ BacklogIssues.prototype.reset = function() {
 
   // リサイズもしてしまう
   this.view.resize();
+};
+
+/**
+ * 自動読み込み設定
+ * main.gs からコールされる
+ */
+BacklogIssues.prototype.setAutoLoad = function(isAuto) {
+  this.trigger.deleteAll("onAutoLoad");
+  this.trigger.deleteAll("onAutoLoadNext");
+
+  // 有効化
+  if (isAuto) {
+    // コンフィグから指定時間を取得
+    var autoRead = this.settings.autoLoad;
+    // セル内は日付型
+    var d = new DateEx(autoRead);
+    var hour = d.getHours();
+    var minute = d.getMinutes();
+
+    // トリガーを設定
+    this.trigger.setEveryTime("onAutoLoad", hour, minute);
+  }
+  // 無効化
+};
+
+/**
+ * 自動読み込み
+ * main.gs からコールされる
+ */
+BacklogIssues.prototype.autoLoad = function(params) {
+  // 初回のみ初期化
+  if (params.isFirst) {
+    // 確認無しで初期化
+    this.reset(false);
+  }
+
+  // 確認無しで読み込み
+  params.isBackground = true;
+  this.load(params);
+
+  // 全て読み込み済み？
+  if (! this.status.isComplete()) {
+    // トリガーを設定
+    this.trigger.setAfter("onAutoLoadNext", 1 * 1000); // 1s
+  }
+};
+
+/**
+ * 自動バックアップ設定
+ * main.gs からコールされる
+ */
+BacklogIssues.prototype.setAutoBackup = function(isBackup) {
+  this.trigger.deleteAll("onAutoBackup");
+
+  // 有効化
+  if (isBackup) {
+    // コンフィグから指定時間を取得
+    var strWeekday = this.settings.autoBackup;
+    var weekday = this.getWeekday(strWeekday);
+
+    // トリガーを設定
+    this.trigger.setEveryWeek("onAutoBackup", weekday, 0, 0);
+  }
+  // 無効化
+
+};
+
+/**
+ * 自動バックアップ
+ * main.gs からコールされる
+ */
+BacklogIssues.prototype.backup = function() {
+  // シート名を持っているクラスで処理
+  this.view.backup(Object.keys(this.sheets).length);
 };

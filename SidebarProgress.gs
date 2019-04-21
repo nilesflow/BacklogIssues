@@ -4,9 +4,13 @@
  * @see https://developers.google.com/apps-script/reference/html/html-output
  * @see https://developers.google.com/apps-script/reference/base/ui
  */
-function SidebarProgress() {
-  this.ui = SpreadsheetApp.getUi();
+function SidebarProgress(params) {
+  if (params.isBackground) {
+    this.ui = null;
+    return;
+  }
 
+  this.ui = SpreadsheetApp.getUi();
   this.template = HtmlService.createTemplateFromFile('Progress');
   this.initOutput();
 }
@@ -24,6 +28,10 @@ SidebarProgress.prototype.initOutput = function() {
  * ログ出力（画面の再表示）
  */
 SidebarProgress.prototype.log = function(message) {
+  if (this.ui == null) {
+    return;
+  }
+
   var d = new DateEx();
   this.output.append('<div class="text">' + d.getTimeStr() + ' ' + message + '</div>');
   this.ui.showSidebar(this.output);  
@@ -33,5 +41,9 @@ SidebarProgress.prototype.log = function(message) {
  * クリア処理
  */
 SidebarProgress.prototype.reset = function() {
+  if (this.ui == null) {
+    return;
+  }
+
   this.initOutput();
 };

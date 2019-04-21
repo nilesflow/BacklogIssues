@@ -686,3 +686,29 @@ BacklogIssuesView.prototype.reset = function() {
   // 一旦、シートをクリアにする
   this.sheet.clear();
 };
+
+/**
+ * バックアップ
+ * 対象シートから日付毎にコピー
+ */
+BacklogIssuesView.prototype.backup = function(pos) {
+  // 現在のスプレッドシートの取得
+  var spread = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 年月でシート名生成
+  var d = new DateEx();
+  var date = d.getDateStr('');
+  var suffix = 0;
+
+  do {
+    name = (suffix ==  0) ? date : date + '-' + suffix;
+    var sheet = spread.getSheetByName(name);
+    suffix ++;
+  } while(sheet != null);
+
+  // コピー（名前指定不可）&名前変更
+  var sheetNew = this.sheet.copyTo(spread);
+  sheetNew.setName(name);
+  sheetNew.activate();
+  spread.moveActiveSheet(1 + pos);
+};

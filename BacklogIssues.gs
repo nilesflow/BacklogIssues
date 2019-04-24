@@ -603,11 +603,16 @@ BacklogIssues.prototype.autoLoad = function(params) {
   if (params.isFirst) {
     // 確認無しで初期化
     this.reset(false);
-  }
 
-  // 確認無しで読み込み
-  params.isBackground = true;
-  this.load(params);
+    // シートクリア後、すぐに情報が反映されないので、一度トリガに返す
+    this.trigger.setAfter("onAutoLoadNext", 1); // 1ms
+    return;
+  }
+  else {
+    // 確認無しで読み込み
+    params.isBackground = true;
+    this.load(params);
+  }
 
   // 全て読み込み済み？
   if (! this.status.isComplete()) {
@@ -642,5 +647,6 @@ BacklogIssues.prototype.setAutoBackup = function(isBackup) {
  */
 BacklogIssues.prototype.backup = function() {
   // シート名を持っているクラスで処理
-  this.view.backup(Object.keys(this.sheets).length);
+  // status分は除く
+  this.view.backup(Object.keys(this.sheets).length - 1);
 };

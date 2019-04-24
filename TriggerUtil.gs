@@ -50,6 +50,7 @@ TriggerUtil.prototype.setEveryWeek = function(name, weekday, hour, minute) {
   .onWeekDay(weekday)
   .create();
 
+  Logger.log(name);
   Logger.log(weekday);
   Logger.log(hour);
   Logger.log(minute);
@@ -66,6 +67,9 @@ TriggerUtil.prototype.setAfter = function(name, ms) {
   .timeBased()
   .after(ms)
   .create();
+
+  Logger.log(name);
+  Logger.log(ms);
 };
 
 /**

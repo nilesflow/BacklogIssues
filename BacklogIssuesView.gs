@@ -452,6 +452,17 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
           columns[attr.index] = this.toHiperlink(this.urlProject, this.project.name);;
         }
         break;
+      case "ID":
+        columns[attr.index] = issue.id;
+        break;
+      case "親ID":
+        if (issue.parentIssueId == null) {
+          columns[attr.index] = "";
+        }
+        else {
+          columns[attr.index] = issue.parentIssueId;
+        }
+        break;
       case "種別":
         columns[attr.index] = issue.issueType.name;
         break;

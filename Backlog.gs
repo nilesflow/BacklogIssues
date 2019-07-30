@@ -16,6 +16,8 @@ function Backlog(param) {
  */
 Backlog.prototype.getSortKey = function(name) {
   var sortKeys = {
+    "ID" : "id",
+    "親ID" : "parentIssueId",
     "種別" : "issueType",
     "キー" : null,
     "件名" : "summary",

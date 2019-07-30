@@ -644,9 +644,10 @@ BacklogIssues.prototype.setAutoBackup = function(isBackup) {
 /**
  * 自動バックアップ
  * main.gs からコールされる
+ * シート名を持っているクラスから挿入位置を指定
  */
 BacklogIssues.prototype.backup = function() {
-  // シート名を持っているクラスで処理
-  // status分は除く
-  this.view.backup(Object.keys(this.sheets).length - 1);
+  // status分は除く。configの後に追加
+  var pos = SpreadsheetApp.getActive().getSheetByName(params.sheets.config).getIndex();
+  this.view.backup(pos);
 };

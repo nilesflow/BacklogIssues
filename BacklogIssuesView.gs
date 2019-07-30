@@ -625,16 +625,23 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
  * シートの高さ、幅をconfigの設定値でリサイズする
  */
 BacklogIssuesView.prototype.resize = function() {
-  // 行
-  this.sheet.autoResizeRows(1, this.sheet.getDataRange().getLastRow());
-
   // 列
+  // 不足列を追加
+  var maxColumns = this.sheet.getMaxColumns(); // 現シートの最大を取得
+  var numColumns = this.lenAttrs - maxColumns;
+  if (numColumns > 0) {
+    this.sheet.insertColumnsAfter(maxColumns, numColumns);
+  }
+
   for (var name in this.attrs) {
     attr = this.attrs[name];
     this.sheet.setColumnWidth((1 + attr.index), attr.size);
   }
   // 日本語が小さくリサイズされる
   // this.sheet.autoResizeColumns(1, this.attrs.length - 1);
+
+  // 行
+  this.sheet.autoResizeRows(1, this.sheet.getDataRange().getLastRow());
 };
 
 /**

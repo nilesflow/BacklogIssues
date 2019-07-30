@@ -635,7 +635,8 @@ BacklogIssuesView.prototype.resize = function() {
 
   for (var name in this.attrs) {
     attr = this.attrs[name];
-    this.sheet.setColumnWidth((1 + attr.index), attr.size);
+    // 最小サイズが2
+    this.sheet.setColumnWidth((1 + attr.index), Math.max(attr.size, 2));
   }
   // 日本語が小さくリサイズされる
   // this.sheet.autoResizeColumns(1, this.attrs.length - 1);

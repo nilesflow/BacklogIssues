@@ -475,6 +475,14 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
           completed = true;
         }
         break;
+      case "完了理由":
+        if (issue.resolution == null) {
+          columns[attr.index] = "";
+        }
+        else {
+          columns[attr.index] = issue.resolution.name;
+        }
+        break;
       case "優先度":
         columns[attr.index] = issue.priority.name;
         break;

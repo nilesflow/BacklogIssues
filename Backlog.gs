@@ -21,6 +21,7 @@ Backlog.prototype.getSortKey = function(name) {
     "件名" : "summary",
     "担当者" : "assignee",
     "状態" : "status",
+    "完了理由" : "resolution",
     "優先度" : "priority",
     "カテゴリー" : "category",
     "マイルストーン" : "milestone",

@@ -550,7 +550,7 @@ BacklogIssuesView.prototype.printIssue = function(issue, url, comments, category
   // 折り返し
   .setWrap(true)
   // 表示形式のリセット（であるはず）
-  .setNumberFormat("")
+  .setNumberFormat("@")
   ;
 
   // 折り返しで行の高さを調節

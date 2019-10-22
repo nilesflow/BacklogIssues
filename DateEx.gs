@@ -17,7 +17,7 @@ DateEx.prototype.getFullYear = function() {
 };
 
 DateEx.prototype.getMonth = function() {
-  return (this.d.getMonth().toString().length == 1) ? ('0' + (this.d.getMonth() + 1)) : (this.d.getMonth() + 1);
+  return ((this.d.getMonth() + 1).toString().length == 1) ? ('0' + (this.d.getMonth() + 1)) : (this.d.getMonth() + 1);
 };
 
 DateEx.prototype.getDate = function() {
